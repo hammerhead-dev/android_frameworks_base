@@ -94,6 +94,7 @@ public class PhoneStatusBarPolicy {
     private final CastController mCast;
     private final SuController mSuController;
     private boolean mAlarmIconVisible;
+    private boolean mSuIconVisible;
     private final HotspotController mHotspot;
 
     // Assume it's all good unless we hear otherwise.  We don't always seem
@@ -229,10 +230,13 @@ public class PhoneStatusBarPolicy {
         mService.setIconVisibility(SLOT_SU, false);
         mSuController.addCallback(mSuCallback);
 
-        mAlarmIconObserver.onChange(true);
+        mIconObserver.onChange(true);
         mContext.getContentResolver().registerContentObserver(
                 Settings.System.getUriFor(Settings.System.SHOW_ALARM_ICON),
-                false, mAlarmIconObserver);
+                false, mIconObserver);
+        mContext.getContentResolver().registerContentObserver(
+                Settings.System.getUriFor(Settings.System.SHOW_SU_ICON),
+                false, mIconObserver);
 
         // hotspot
         mService.setIcon(SLOT_HOTSPOT, R.drawable.stat_sys_hotspot, 0, null);
@@ -242,12 +246,15 @@ public class PhoneStatusBarPolicy {
         QSUtils.registerObserverForQSChanges(mContext, mQSListener);
     }
 
-    private ContentObserver mAlarmIconObserver = new ContentObserver(null) {
+    private ContentObserver mIconObserver = new ContentObserver(null) {
         @Override
         public void onChange(boolean selfChange, Uri uri) {
             mAlarmIconVisible = Settings.System.getInt(mContext.getContentResolver(),
                     Settings.System.SHOW_ALARM_ICON, 1) == 1;
+            mSuIconVisible = Settings.System.getInt(mContext.getContentResolver(),
+                    Settings.System.SHOW_SU_ICON, 1) == 1;
             updateAlarm();
+            updateSu();
         }
 
         @Override
@@ -455,7 +462,7 @@ public class PhoneStatusBarPolicy {
     };
 
     private void updateSu() {
-        mService.setIconVisibility(SLOT_SU, mSuController.hasActiveSessions());
+        mService.setIconVisibility(SLOT_SU, mSuIconVisible && mSuController.hasActiveSessions());
         if (mSuController.hasActiveSessions()) {
             publishSuCustomTile();
         } else {
